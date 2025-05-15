@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniWall - Animated Wallpaper</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='CSS/Styles.css') }}">
+
+    <style>
+        {% if SelectedBackground %}
+            .Background-Image {
+                background-image: none;
+                background: transparent;
+                width: 90%;
+                height: 90%;
+                padding: 0.75rem 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                border-radius: var(--border-radius-md);
+            }
+        {% else %}
+            .Background-Image {
+                background-image: url("{{ url_for('static',filename='Images/ImagePanel.png') }}");
+                width: 80%;
+                height: 10rem;
+                background-size: cover;
+                background-position: center;
+                position: relative;
+                margin-top: 1.25rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border-radius: 0.5rem;
+            }
+        {% endif %}
+    </style>
+
+</head>
+<body>
+    <header class="Header glass-effect">
+        <div class="Application-Name">AniWall</div>
+        <div class="Header-Glass-Style glass-style"></div>
+        <div class="Application-Version">v1.0.0 (Demo)</div>
+    </header>
+
+    <div class="main-container">
+        <section class="Backgrounds-List-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Categories">
+                <button class="{% if current_category == 'All' %}active{% endif %}" onclick="selectCategory('All')" id="Category-btn">All</button>
+                <div class="Line"></div>
+                <button class="{% if current_category == 'Popular' %}active{% endif %}" onclick="selectCategory('Popular')" id="Category-btn">Popular</button>
+                <button class="{% if current_category == 'Anime' %}active{% endif %}" onclick="selectCategory('Anime')" id="Category-btn">Anime</button>
+                <button class="{% if current_category == 'Gaming' %}active{% endif %}" onclick="selectCategory('Gaming')" id="Category-btn">Gaming</button>
+                <button class="{% if current_category == 'Chill' %}active{% endif %}" onclick="selectCategory('Chill')" id="Category-btn">Chill</button>
+                <button class="{% if current_category == 'Other' %}active{% endif %}" onclick="selectCategory('Other')" id="Category-btn">Other</button>
+                <input type="text" id="search" class="Search-Box" placeholder="Search backgrounds..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="Line-Category"></div>
+            <div class="Backgrounds">
+                {% for Background in BackgroundsListData %}
+                    <div class="Background" onclick="selectBackground('{{ Background['Name'] }}')">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % Background['Name']) }}" class="Cover">
+                        <p class="Name">{{ Background["Name"] }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="Background-Panel-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Background-Image">
+                {% if SelectedBackground %}
+                    <div class="Info">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % SelectedBackground['Name']) }}" alt="Selected Background" class="Selected">
+                        <div class="Name-Container">
+                            <span class="Background-Name">{{ SelectedBackground['Name'] }}</span>
+                            {% if SelectedBackground['Popular'] %}
+                                <span class="Popular-Tag"></span>
+                            {% endif %}
+                        </div>
+                        <span class="Background-Category">{{ GetMainCategory(SelectedBackground['Categories']) }}</span>
+                        <div class="Background-Controls">
+                            <button class="Control-Button">Set as Wallpaper</button>
+                            <button class="Control-Button">Download Wallpaper</button>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="None-Selected">Please Select Background First</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Function to update button styles
+        function updateButtonStyles(activeButton) {
+            // Get all category buttons
+            const buttons = document.querySelectorAll('.category-btn');
+
+            // Reset styles for all buttons
+            buttons.forEach(button => {
+                button.style.backgroundColor = 'transparent';
+                button.style.border = '2px solid #C9C9C9';
+                button.style.color = ''; // Reset to default or remove if set elsewhere
+            });
+
+            // Apply styles to the active button
+            if (activeButton) {
+                activeButton.style.backgroundColor = '#C9C9C9';
+                activeButton.style.color = '#403F41';
+                // Use setProperty to apply !important
+                activeButton.style.setProperty('background-color', '#C9C9C9', 'important');
+                activeButton.style.setProperty('color', '#403F41', 'important');
+            }
+        }
+
+        // Function to handle category selection
+        function selectCategory(category) {
+            // Update URL (keeps existing functionality)
+            window.location.href = '/?category=' + encodeURIComponent(category);
+        }
+
+        // Add click event listeners to all category buttons
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update styles immediately (before page reload)
+                updateButtonStyles(this);
+                // Trigger category selection
+                selectCategory(this.getAttribute('data-category'));
+            });
+        });
+
+        // Auto resize background name text based on length
+        function resizeBackgroundName() {
+            // For background names in the grid
+            document.querySelectorAll('.Background .Name').forEach(nameElement => {
+                const textLength = nameElement.textContent.trim().length;
+                // Scale font size between 0.8rem and 2rem based on text length
+                // Shorter text gets larger font, longer text gets smaller font
+                const maxLength = 30; // Approximate maximum length threshold
+                const minLength = 5;  // Approximate minimum length threshold
+
+                // Calculate the font size based on text length
+                // Map text length to font size range: longer text → smaller font
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2; // Maximum font size for very short text
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8; // Minimum font size for very long text
+                } else {
+                    // Linear interpolation between max and min font sizes
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2); // From 2rem down to 0.8rem
+                }
+
+                nameElement.style.fontSize = `${fontSize}rem`;
+            });
+
+            // For the selected background name in the detail panel
+            const selectedNameElement = document.querySelector('.Background-Name');
+            if (selectedNameElement) {
+                const textLength = selectedNameElement.textContent.trim().length;
+                const maxLength = 30;
+                const minLength = 5;
+
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2;
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8;
+                } else {
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2);
+                }
+
+                selectedNameElement.style.fontSize = `${fontSize}rem`;
+            }
+        }
+
+        // On page load, apply styles to the active button based on server-side class
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeButton = document.querySelector('.category-btn.active');
+            updateButtonStyles(activeButton);
+
+            // Apply font size adjustment to background names
+            resizeBackgroundName();
+        });
+
+        // Search functionality
+        function searchBackgrounds() {
+            var searchQuery = document.getElementById('search').value;
+            var url = new URL(window.location.href);
+            url.searchParams.set('search', searchQuery);
+            window.location.href = url.toString();
+        }
+
+        document.getElementById('search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBackgrounds();
+            }
+        });
+
+        // Function to select a background and show its details
+        function selectBackground(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentCategory = urlParams.get('category') || 'All';
+            const currentSearch = urlParams.get('search') || '';
+
+            // Build the URL with all current parameters plus the selected background
+            let url = '/?selected=' + encodeURIComponent(name);
+
+            // Add existing filters if present
+            if (currentCategory !== 'All') {
+                url += '&category=' + encodeURIComponent(currentCategory);
+            }
+
+            if (currentSearch) {
+                url += '&search=' + encodeURIComponent(currentSearch);
+            }
+
+            // Navigate to the URL to trigger the GET request
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>
