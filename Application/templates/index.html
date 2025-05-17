@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -226,3 +227,870 @@
     </script>
 </body>
 </html>
+=======
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniWall - Animated Wallpaper</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='CSS/Styles.css') }}">
+
+    <style>
+        {% if SelectedBackground %}
+            .Background-Image {
+                background-image: none;
+                background: transparent;
+                width: 90%;
+                height: 90%;
+                padding: 0.75rem 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                border-radius: var(--border-radius-md);
+            }
+        {% else %}
+            .Background-Image {
+                background-image: url("{{ url_for('static',filename='Images/ImagePanel.png') }}");
+                width: 80%;
+                height: 10rem;
+                background-size: cover;
+                background-position: center;
+                position: relative;
+                margin-top: 1.25rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border-radius: 0.5rem;
+            }
+        {% endif %}
+    </style>
+
+</head>
+<body>
+    <header class="Header glass-effect">
+        <div class="Application-Name">AniWall</div>
+        <div class="Header-Glass-Style glass-style"></div>
+        <div class="Application-Version">v1.0.0 (Demo)</div>
+    </header>
+
+    <div class="main-container">
+        <section class="Backgrounds-List-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Categories">
+                <button class="{% if current_category == 'All' %}active{% endif %}" onclick="selectCategory('All')" id="Category-btn">All</button>
+                <div class="Line"></div>
+                <button class="{% if current_category == 'Popular' %}active{% endif %}" onclick="selectCategory('Popular')" id="Category-btn">Popular</button>
+                <button class="{% if current_category == 'Anime' %}active{% endif %}" onclick="selectCategory('Anime')" id="Category-btn">Anime</button>
+                <button class="{% if current_category == 'Gaming' %}active{% endif %}" onclick="selectCategory('Gaming')" id="Category-btn">Gaming</button>
+                <button class="{% if current_category == 'Chill' %}active{% endif %}" onclick="selectCategory('Chill')" id="Category-btn">Chill</button>
+                <button class="{% if current_category == 'Other' %}active{% endif %}" onclick="selectCategory('Other')" id="Category-btn">Other</button>
+                <input type="text" id="search" class="Search-Box" placeholder="Search backgrounds..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="Line-Category"></div>
+            <div class="Backgrounds">
+                {% for Background in BackgroundsListData %}
+                    <div class="Background" onclick="selectBackground('{{ Background['Name'] }}')">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % Background['Name']) }}" class="Cover">
+                        <p class="Name">{{ Background["Name"] }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="Background-Panel-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Background-Image">
+                {% if SelectedBackground %}
+                    <div class="Info">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % SelectedBackground['Name']) }}" alt="Selected Background" class="Selected">
+                        <div class="Name-Container">
+                            <span class="Background-Name">{{ SelectedBackground['Name'] }}</span>
+                            {% if SelectedBackground['Popular'] %}
+                                <span class="Popular-Tag"></span>
+                            {% endif %}
+                        </div>
+                        <span class="Background-Category">{{ GetMainCategory(SelectedBackground['Categories']) }}</span>
+                        <div class="Background-Controls">
+                            <button class="Control-Button">Set as Wallpaper</button>
+                            <button class="Control-Button">Download Wallpaper</button>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="None-Selected">Please Select Background First</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Function to update button styles
+        function updateButtonStyles(activeButton) {
+            // Get all category buttons
+            const buttons = document.querySelectorAll('.category-btn');
+
+            // Reset styles for all buttons
+            buttons.forEach(button => {
+                button.style.backgroundColor = 'transparent';
+                button.style.border = '2px solid #C9C9C9';
+                button.style.color = ''; // Reset to default or remove if set elsewhere
+            });
+
+            // Apply styles to the active button
+            if (activeButton) {
+                activeButton.style.backgroundColor = '#C9C9C9';
+                activeButton.style.color = '#403F41';
+                // Use setProperty to apply !important
+                activeButton.style.setProperty('background-color', '#C9C9C9', 'important');
+                activeButton.style.setProperty('color', '#403F41', 'important');
+            }
+        }
+
+        // Function to handle category selection
+        function selectCategory(category) {
+            // Update URL (keeps existing functionality)
+            window.location.href = '/?category=' + encodeURIComponent(category);
+        }
+
+        // Add click event listeners to all category buttons
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update styles immediately (before page reload)
+                updateButtonStyles(this);
+                // Trigger category selection
+                selectCategory(this.getAttribute('data-category'));
+            });
+        });
+
+        // Auto resize background name text based on length
+        function resizeBackgroundName() {
+            // For background names in the grid
+            document.querySelectorAll('.Background .Name').forEach(nameElement => {
+                const textLength = nameElement.textContent.trim().length;
+                // Scale font size between 0.8rem and 2rem based on text length
+                // Shorter text gets larger font, longer text gets smaller font
+                const maxLength = 30; // Approximate maximum length threshold
+                const minLength = 5;  // Approximate minimum length threshold
+
+                // Calculate the font size based on text length
+                // Map text length to font size range: longer text → smaller font
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2; // Maximum font size for very short text
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8; // Minimum font size for very long text
+                } else {
+                    // Linear interpolation between max and min font sizes
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2); // From 2rem down to 0.8rem
+                }
+
+                nameElement.style.fontSize = `${fontSize}rem`;
+            });
+
+            // For the selected background name in the detail panel
+            const selectedNameElement = document.querySelector('.Background-Name');
+            if (selectedNameElement) {
+                const textLength = selectedNameElement.textContent.trim().length;
+                const maxLength = 30;
+                const minLength = 5;
+
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2;
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8;
+                } else {
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2);
+                }
+
+                selectedNameElement.style.fontSize = `${fontSize}rem`;
+            }
+        }
+
+        // On page load, apply styles to the active button based on server-side class
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeButton = document.querySelector('.category-btn.active');
+            updateButtonStyles(activeButton);
+
+            // Apply font size adjustment to background names
+            resizeBackgroundName();
+        });
+
+        // Search functionality
+        function searchBackgrounds() {
+            var searchQuery = document.getElementById('search').value;
+            var url = new URL(window.location.href);
+            url.searchParams.set('search', searchQuery);
+            window.location.href = url.toString();
+        }
+
+        document.getElementById('search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBackgrounds();
+            }
+        });
+
+        // Function to select a background and show its details
+        function selectBackground(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentCategory = urlParams.get('category') || 'All';
+            const currentSearch = urlParams.get('search') || '';
+
+            // Build the URL with all current parameters plus the selected background
+            let url = '/?selected=' + encodeURIComponent(name);
+
+            // Add existing filters if present
+            if (currentCategory !== 'All') {
+                url += '&category=' + encodeURIComponent(currentCategory);
+            }
+
+            if (currentSearch) {
+                url += '&search=' + encodeURIComponent(currentSearch);
+            }
+
+            // Navigate to the URL to trigger the GET request
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniWall - Animated Wallpaper</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='CSS/Styles.css') }}">
+
+    <style>
+        {% if SelectedBackground %}
+            .Background-Image {
+                background-image: none;
+                background: transparent;
+                width: 90%;
+                height: 90%;
+                padding: 0.75rem 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                border-radius: var(--border-radius-md);
+            }
+        {% else %}
+            .Background-Image {
+                background-image: url("{{ url_for('static',filename='Images/ImagePanel.png') }}");
+                width: 80%;
+                height: 10rem;
+                background-size: cover;
+                background-position: center;
+                position: relative;
+                margin-top: 1.25rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border-radius: 0.5rem;
+            }
+        {% endif %}
+
+        .Control-Button.disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background-color: #2a2a2a !important;
+            border: 2px solid #555555 !important;
+            color: #888888 !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        .Control-Button.disabled:hover {
+            background-color: #2a2a2a !important;
+            border: 2px solid #555555 !important;
+            transform: none !important;
+        }
+
+        /* Progress bar styles */
+        .Control-Button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 4px;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease-in-out;
+            border-radius: 0 0 4px 4px; /* Smooth bottom corners */
+        }
+
+        .Control-Button .button-text {
+            position: relative;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+
+        .Control-Button.downloading {
+            cursor: default;
+            background-color: #2a2a2a !important;
+            color: white !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Add a subtle animation to the downloading state */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .Control-Button.downloading .button-text {
+            animation: pulse 2s infinite;
+        }
+
+        /* Set as wallpaper button styles */
+        .Control-Button.setting {
+            cursor: default;
+            background-color: #2a2a2a !important;
+            color: white !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .Control-Button.setting .button-text {
+            animation: pulse 1s infinite;
+        }
+
+        /* Disable wallpaper button */
+        .Control-Button.disable-mode {
+            background-color: #d32f2f !important;
+            border: 2px solid #b71c1c !important;
+        }
+
+        .Control-Button.disable-mode:hover {
+            background-color: #b71c1c !important;
+            border: 2px solid #d32f2f !important;
+        }
+
+        .Control-Button.disabling {
+            background-color: #a31515 !important;
+            cursor: default;
+        }
+    </style>
+
+</head>
+<body>
+    <header class="Header glass-effect">
+        <div class="Application-Name">AniWall</div>
+        <div class="Header-Glass-Style glass-style"></div>
+        <div class="Application-Version">v1.0.0 (Demo)</div>
+    </header>
+
+    <div class="main-container">
+        <section class="Backgrounds-List-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Categories">
+                <button class="{% if current_category == 'All' %}active{% endif %}" onclick="selectCategory('All')" id="Category-btn">All</button>
+                <div class="Line"></div>
+                <button class="{% if current_category == 'Popular' %}active{% endif %}" onclick="selectCategory('Popular')" id="Category-btn">Popular</button>
+                <button class="{% if current_category == 'Anime' %}active{% endif %}" onclick="selectCategory('Anime')" id="Category-btn">Anime</button>
+                <button class="{% if current_category == 'Gaming' %}active{% endif %}" onclick="selectCategory('Gaming')" id="Category-btn">Gaming</button>
+                <button class="{% if current_category == 'Chill' %}active{% endif %}" onclick="selectCategory('Chill')" id="Category-btn">Chill</button>
+                <button class="{% if current_category == 'Other' %}active{% endif %}" onclick="selectCategory('Other')" id="Category-btn">Other</button>
+                <input type="text" id="search" class="Search-Box" placeholder="Search backgrounds..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="Line-Category"></div>
+            <div class="Backgrounds">
+                {% for Background in BackgroundsListData %}
+                    <div class="Background" onclick="selectBackground('{{ Background['Name'] }}')">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % Background['Name']) }}" class="Cover">
+                        <p class="Name">{{ Background["Name"] }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="Background-Panel-Section glass-effect">
+            <div class="Section-Glass-Style glass-style"></div>
+            <div class="Background-Image">
+                {% if SelectedBackground %}
+                    <div class="Info">
+                        <img src="{{ url_for('static', filename='Images/Covers/%s.jpg' % SelectedBackground['Name']) }}" alt="Selected Background" class="Selected">
+                        <div class="Name-Container">
+                            <span class="Background-Name">{{ SelectedBackground['Name'] }}</span>
+                            {% if SelectedBackground['Popular'] %}
+                                <span class="Popular-Tag"></span>
+                            {% endif %}
+                        </div>
+                        <span class="Background-Category">{{ GetMainCategory(SelectedBackground['Categories']) }}</span>
+                        <div class="Background-Controls">
+                            <button id="set-wallpaper-btn" class="Control-Button {% if not wallpaper_exists %}disabled{% endif %}"
+                                    {% if not wallpaper_exists %}disabled{% endif %}>
+                                <span class="button-text">Set as Wallpaper</span>
+                            </button>
+                            <button id="download-wallpaper-btn" class="Control-Button {% if wallpaper_exists %}disabled{% endif %}"
+                                    {% if wallpaper_exists %}disabled{% endif %}>
+                                <span class="button-text">{% if wallpaper_exists %}Already Downloaded{% else %}Download Wallpaper{% endif %}</span>
+                                <div class="progress-bar"></div>
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="None-Selected">Please Select Background First</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Function to update button styles
+        function updateButtonStyles(activeButton) {
+            // Get all category buttons
+            const buttons = document.querySelectorAll('.category-btn');
+
+            // Reset styles for all buttons
+            buttons.forEach(button => {
+                button.style.backgroundColor = 'transparent';
+                button.style.border = '2px solid #C9C9C9';
+                button.style.color = ''; // Reset to default or remove if set elsewhere
+            });
+
+            // Apply styles to the active button
+            if (activeButton) {
+                activeButton.style.backgroundColor = '#C9C9C9';
+                activeButton.style.color = '#403F41';
+                // Use setProperty to apply !important
+                activeButton.style.setProperty('background-color', '#C9C9C9', 'important');
+                activeButton.style.setProperty('color', '#403F41', 'important');
+            }
+        }
+
+        // Function to handle category selection
+        function selectCategory(category) {
+            // Update URL (keeps existing functionality)
+            window.location.href = '/?category=' + encodeURIComponent(category);
+        }
+
+        // Add click event listeners to all category buttons
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update styles immediately (before page reload)
+                updateButtonStyles(this);
+                // Trigger category selection
+                selectCategory(this.getAttribute('data-category'));
+            });
+        });
+
+        // Auto resize background name text based on length
+        function resizeBackgroundName() {
+            // For background names in the grid
+            document.querySelectorAll('.Background .Name').forEach(nameElement => {
+                const textLength = nameElement.textContent.trim().length;
+                // Scale font size between 0.8rem and 2rem based on text length
+                // Shorter text gets larger font, longer text gets smaller font
+                const maxLength = 30; // Approximate maximum length threshold
+                const minLength = 5;  // Approximate minimum length threshold
+
+                // Calculate the font size based on text length
+                // Map text length to font size range: longer text → smaller font
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2; // Maximum font size for very short text
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8; // Minimum font size for very long text
+                } else {
+                    // Linear interpolation between max and min font sizes
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2); // From 2rem down to 0.8rem
+                }
+
+                nameElement.style.fontSize = `${fontSize}rem`;
+            });
+
+            // For the selected background name in the detail panel
+            const selectedNameElement = document.querySelector('.Background-Name');
+            if (selectedNameElement) {
+                const textLength = selectedNameElement.textContent.trim().length;
+                const maxLength = 30;
+                const minLength = 5;
+
+                let fontSize;
+                if (textLength <= minLength) {
+                    fontSize = 2;
+                } else if (textLength >= maxLength) {
+                    fontSize = 0.8;
+                } else {
+                    const ratio = (textLength - minLength) / (maxLength - minLength);
+                    fontSize = 2 - (ratio * 1.2);
+                }
+
+                selectedNameElement.style.fontSize = `${fontSize}rem`;
+            }
+        }
+
+        // Function to check if wallpaper is active and update UI accordingly
+        function checkWallpaperStatus() {
+            const backgroundName = document.querySelector('.Background-Name')?.textContent;
+
+            if (backgroundName) {
+                fetch('/wallpaper-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        const setWallpaperBtn = document.getElementById('set-wallpaper-btn');
+
+                        if (data.success && data.is_active && !setWallpaperBtn.classList.contains('disable-mode')) {
+                            // If wallpaper is active but button is not in disable mode, convert to disable button
+                            convertToDisableButton();
+                        } else if (!data.is_active && setWallpaperBtn.classList.contains('disable-mode')) {
+                            // If wallpaper is not active but button is in disable mode, revert to normal
+                            convertToSetWallpaperButton();
+                        }
+                    })
+                    .catch(error => console.error('Error checking wallpaper status:', error));
+            }
+        }
+
+        // Function to convert the button to "Disable Wallpaper"
+        function convertToDisableButton() {
+            const setWallpaperBtn = document.getElementById('set-wallpaper-btn');
+            if (setWallpaperBtn) {
+                setWallpaperBtn.classList.add('disable-mode');
+                setWallpaperBtn.querySelector('.button-text').textContent = "Disable Wallpaper";
+
+                // Remove any existing event listeners by cloning and replacing
+                const newButton = setWallpaperBtn.cloneNode(true);
+                setWallpaperBtn.parentNode.replaceChild(newButton, setWallpaperBtn);
+
+                // Add event listener for disable functionality
+                newButton.addEventListener('click', disableWallpaper);
+            }
+        }
+
+        // Function to convert back to "Set as Wallpaper"
+        function convertToSetWallpaperButton() {
+            const disableBtn = document.getElementById('set-wallpaper-btn');
+            if (disableBtn) {
+                disableBtn.classList.remove('disable-mode', 'disabling');
+                disableBtn.querySelector('.button-text').textContent = "Set as Wallpaper";
+
+                // Remove any existing event listeners by cloning and replacing
+                const newButton = disableBtn.cloneNode(true);
+                disableBtn.parentNode.replaceChild(newButton, disableBtn);
+
+                // Add the set wallpaper event listener
+                setupSetWallpaperListener(newButton);
+            }
+        }
+
+        // Function to disable the wallpaper
+        function disableWallpaper() {
+            const disableBtn = document.getElementById('set-wallpaper-btn');
+
+            // Update button state to show it's processing
+            disableBtn.classList.add('disabling');
+            disableBtn.querySelector('.button-text').textContent = "Disabling...";
+            disableBtn.disabled = true;
+
+            // Call the disable-wallpaper endpoint
+            fetch('/disable-wallpaper')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Wallpaper disabled successfully. Original wallpaper restored.");
+                        convertToSetWallpaperButton();
+                    } else {
+                        alert("Failed to disable wallpaper: " + data.error);
+                        // Revert button state
+                        disableBtn.classList.remove('disabling');
+                        disableBtn.querySelector('.button-text').textContent = "Disable Wallpaper";
+                        disableBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    alert("Error occurred while disabling wallpaper: " + error);
+                    // Revert button state
+                    disableBtn.classList.remove('disabling');
+                    disableBtn.querySelector('.button-text').textContent = "Disable Wallpaper";
+                    disableBtn.disabled = false;
+                });
+        }
+
+        // Function to set up set wallpaper button listener
+        function setupSetWallpaperListener(button) {
+            if (button && !button.classList.contains('disabled')) {
+                button.addEventListener('click', function() {
+                    // Get the selected background name
+                    const backgroundName = document.querySelector('.Background-Name').textContent;
+
+                    // Update button state to show it's processing
+                    button.classList.add('setting');
+                    const originalText = button.querySelector('.button-text').textContent;
+                    button.querySelector('.button-text').textContent = "Setting Wallpaper...";
+
+                    // Disable the button temporarily to prevent multiple clicks
+                    button.disabled = true;
+
+                    // Make an AJAX request to set the wallpaper
+                    fetch('/set-wallpaper?name=' + encodeURIComponent(backgroundName))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("Wallpaper set successfully!");
+                                // Convert to disable button
+                                convertToDisableButton();
+                            } else {
+                                // Reset button state on failure
+                                button.classList.remove('setting');
+                                button.querySelector('.button-text').textContent = originalText;
+                                button.disabled = false;
+                                alert("Failed to set wallpaper: " + data.error);
+                            }
+                        })
+                        .catch(error => {
+                            // Reset button state on error
+                            button.classList.remove('setting');
+                            button.querySelector('.button-text').textContent = originalText;
+                            button.disabled = false;
+                            alert("Error occurred while setting wallpaper: " + error);
+                        });
+                });
+            }
+        }
+
+        // On page load, apply styles to the active button based on server-side class
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeButton = document.querySelector('.category-btn.active');
+            updateButtonStyles(activeButton);
+
+            // Apply font size adjustment to background names
+            resizeBackgroundName();
+
+            // Check if wallpaper is active
+            checkWallpaperStatus();
+
+            // Set up event listeners for buttons
+            setupButtonEvents();
+
+            // Periodically check wallpaper status (every 5 seconds)
+            setInterval(checkWallpaperStatus, 5000);
+        });
+
+        // Function to handle wallpaper buttons
+        function setupButtonEvents() {
+            const downloadBtn = document.getElementById('download-wallpaper-btn');
+            const setWallpaperBtn = document.getElementById('set-wallpaper-btn');
+
+            if (downloadBtn) {
+                if (!downloadBtn.classList.contains('disabled')) {
+                    downloadBtn.addEventListener('click', function() {
+                        // Get the selected background name
+                        const backgroundName = document.querySelector('.Background-Name').textContent;
+
+                        // Disable the button during download and show progress
+                        downloadBtn.classList.add('downloading');
+                        downloadBtn.querySelector('.button-text').textContent = "Downloading: 0.0%";
+
+                        // Start the download
+                        fetch('/download-wallpaper?name=' + encodeURIComponent(backgroundName))
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // If already downloaded, just update the UI
+                                    if (data.status === 'already_downloaded') {
+                                        completeDownload();
+                                        return;
+                                    }
+
+                                    // Otherwise start tracking progress
+                                    trackDownloadProgress(backgroundName);
+                                } else {
+                                    // Handle error
+                                    alert("Failed to download wallpaper: " + data.error);
+                                    resetDownloadButton();
+                                }
+                            })
+                            .catch(error => {
+                                alert("Error occurred while downloading: " + error);
+                                resetDownloadButton();
+                            });
+                    });
+                }
+            }
+
+            if (setWallpaperBtn) {
+                // Check if wallpaper is active
+                fetch('/wallpaper-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.is_active) {
+                            // If wallpaper is active, show disable button
+                            convertToDisableButton();
+                        } else {
+                            // Otherwise setup normal set wallpaper button
+                            setupSetWallpaperListener(setWallpaperBtn);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking wallpaper status:', error);
+                        // Default to set wallpaper button on error
+                        setupSetWallpaperListener(setWallpaperBtn);
+                    });
+            }
+        }
+
+        // Function to track download progress with improved accuracy and responsiveness
+        function trackDownloadProgress(backgroundName) {
+            const downloadBtn = document.getElementById('download-wallpaper-btn');
+            const progressBar = downloadBtn.querySelector('.progress-bar');
+            let progressChecks = 0;
+
+            // More frequent updates for smoother progress display
+            const progressInterval = setInterval(() => {
+                fetch('/download-progress?name=' + encodeURIComponent(backgroundName))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update progress bar with precise value (no rounding)
+                            const progress = data.progress;
+
+                            // Update the width with exact percentage
+                            progressBar.style.width = `${progress}%`;
+
+                            // Display progress with 1 decimal place for better precision
+                            const displayProgress = Math.min(99.9, progress).toFixed(1);
+                            downloadBtn.querySelector('.button-text').textContent = `Downloading: ${displayProgress}%`;
+
+                            // Apply a smooth transition effect
+                            progressBar.style.transition = 'width 0.3s ease-in-out';
+
+                            // Check if download is complete
+                            if (progress >= 100 || data.status === 'completed') {
+                                clearInterval(progressInterval);
+                                completeDownload();
+                            }
+
+                            // Reset counter since we got a successful response
+                            progressChecks = 0;
+                        } else {
+                            progressChecks++;
+
+                            // If we've had too many failed checks, assume download failed
+                            if (progressChecks > 10) {
+                                clearInterval(progressInterval);
+                                alert("Download failed: " + (data.error || "Unable to track progress"));
+                                resetDownloadButton();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        progressChecks++;
+
+                        // If we've had too many failed checks, assume download failed
+                        if (progressChecks > 10) {
+                            clearInterval(progressInterval);
+                            alert("Error tracking download: " + error);
+                            resetDownloadButton();
+                        }
+                    });
+            }, 200); // Check more frequently - every 200ms
+        }
+
+        // Function to handle completed download with smooth transition
+        function completeDownload() {
+            const downloadBtn = document.getElementById('download-wallpaper-btn');
+            const setWallpaperBtn = document.getElementById('set-wallpaper-btn');
+            const progressBar = downloadBtn.querySelector('.progress-bar');
+
+            // Ensure progress bar shows 100%
+            progressBar.style.width = "100%";
+
+            // Update the download button with a small delay to ensure animation completes
+            setTimeout(() => {
+                downloadBtn.classList.remove('downloading');
+                downloadBtn.classList.add('disabled');
+                downloadBtn.disabled = true;
+                downloadBtn.querySelector('.button-text').textContent = "Already Downloaded";
+
+                // Enable the set wallpaper button
+                if (setWallpaperBtn) {
+                    setWallpaperBtn.classList.remove('disabled');
+                    setWallpaperBtn.disabled = false;
+
+                    // Check if wallpaper is active
+                    fetch('/wallpaper-status')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.is_active) {
+                                // If wallpaper is active, show disable button
+                                convertToDisableButton();
+                            } else {
+                                // Otherwise setup normal set wallpaper button
+                                setupSetWallpaperListener(setWallpaperBtn);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking wallpaper status:', error);
+                            // Default to set wallpaper button on error
+                            setupSetWallpaperListener(setWallpaperBtn);
+                        });
+                }
+
+                alert("Wallpaper downloaded successfully!");
+            }, 300);
+        }
+
+        // Function to reset the download button if download fails
+        function resetDownloadButton() {
+            const downloadBtn = document.getElementById('download-wallpaper-btn');
+
+            downloadBtn.classList.remove('downloading');
+            downloadBtn.querySelector('.button-text').textContent = "Download Wallpaper";
+            downloadBtn.querySelector('.progress-bar').style.width = "0%";
+        }
+
+        // Search functionality
+        function searchBackgrounds() {
+            var searchQuery = document.getElementById('search').value;
+            var url = new URL(window.location.href);
+            url.searchParams.set('search', searchQuery);
+            window.location.href = url.toString();
+        }
+
+        document.getElementById('search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBackgrounds();
+            }
+        });
+
+        // Function to select a background and show its details
+        function selectBackground(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentCategory = urlParams.get('category') || 'All';
+            const currentSearch = urlParams.get('search') || '';
+
+            // Build the URL with all current parameters plus the selected background
+            let url = '/?selected=' + encodeURIComponent(name);
+
+            // Add existing filters if present
+            if (currentCategory !== 'All') {
+                url += '&category=' + encodeURIComponent(currentCategory);
+            }
+
+            if (currentSearch) {
+                url += '&search=' + encodeURIComponent(currentSearch);
+            }
+
+            // Navigate to the URL to trigger the GET request
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>
+>>>>>>> f0ac188 (Initial commit)
+>>>>>>> c6a8d8e (Initial commit)
