@@ -10,15 +10,8 @@ import sys
 import shutil
 
 #---------< Paths >---------
-def ResourcePath(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except AttributeError:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-DataPath = ResourcePath(os.path.join(".","BackgroundsData","BackgroundsData.json"))
-ORIGINAL_WALLPAPER_PATH = ResourcePath(os.path.join(".","BackgroundsData","original_wallpaper.jpg"))
+DataPath = os.path.join(".","BackgroundsData","BackgroundsData.json")
+ORIGINAL_WALLPAPER_PATH = os.path.join(".","BackgroundsData","original_wallpaper.jpg")
 wallpaper_process = None
 #---------< Functions >---------
 def GetMainData():
@@ -45,7 +38,7 @@ def GetDataOfWallpaper(SearchType: str, SearchValue: str = None):
 
 def GetCoversPath(WithFolder: bool = True):
     Index = 0
-    CoversFolderPath = ResourcePath(os.path.join(".","static","Images","Covers"))
+    CoversFolderPath = os.path.join(".","static","Images","Covers")
     CoversPath = os.listdir(CoversFolderPath)
     if WithFolder:
         for Item in CoversPath:
@@ -65,9 +58,9 @@ def DownloadBackground(BackgroundName: str, progress_tracker=None):
     Link = f"https://raw.githubusercontent.com/YashaNajafi/AniWall/refs/heads/main/Wallpapers/{filename}"
     current_file = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(current_file))
-    videos_dir = ResourcePath(os.path.join(base_dir, "Videos"))
+    videos_dir = os.path.join(base_dir, "Videos")
     os.makedirs(videos_dir, exist_ok=True)
-    file_path = ResourcePath(os.path.join(videos_dir, filename))
+    file_path = os.path.join(videos_dir, filename)
     try:
         with open(file_path, 'wb') as _:
             pass
@@ -135,9 +128,9 @@ def DownloadBackground(BackgroundName: str, progress_tracker=None):
 def CheckWallpaperExist(BackgroundName: str) -> bool:
     BackgroundName += ".mp4"
     current_file = os.path.abspath(__file__)
-    base_dir = ResourcePath(os.path.dirname(os.path.dirname(current_file)))
-    videos_dir = ResourcePath(os.path.join(base_dir, "Videos"))
-    file_path = ResourcePath(os.path.join(videos_dir, BackgroundName))
+    base_dir = os.path.dirname(os.path.dirname(current_file))
+    videos_dir = os.path.join(base_dir, "Videos")
+    file_path = os.path.join(videos_dir, BackgroundName)
     return os.path.isfile(file_path)
 
 def GetCategory(CategorySTR: str):
@@ -219,7 +212,7 @@ def SetAnimatedWallpaper(video_path):
             wallpaper_process.wait()
         current_file = os.path.abspath(__file__)
         base_dir = os.path.dirname(current_file)
-        wallpaper_script = ResourcePath(os.path.join(base_dir, "Wallpaper.py"))
+        wallpaper_script = os.path.join(base_dir, "Wallpaper.py")
         wallpaper_process = subprocess.Popen([sys.executable, wallpaper_script, video_path])
 
         time.sleep(0.5)
