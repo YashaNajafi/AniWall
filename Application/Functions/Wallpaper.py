@@ -33,7 +33,6 @@ class VideoWallpaper(QMainWindow):
 
         self.showFullScreen()
 
-        # Set as wallpaper first and then play
         success = self.set_as_wallpaper()
         if success:
             self.media_player.play()
@@ -59,23 +58,20 @@ class VideoWallpaper(QMainWindow):
 
     def set_as_wallpaper(self):
         try:
-            # Find the Program Manager window
             progman = win32gui.FindWindow("Progman", None)
             if not progman:
                 print("Could not find Progman window")
                 return False
 
-            # Send message to create the WorkerW
             win32gui.SendMessageTimeout(
                 progman,
-                0x052C,  # WM_USER + 0x12C
+                0x052C,
                 0,
                 0,
                 win32con.SMTO_NORMAL,
                 1000
             )
 
-            # Find the right WorkerW window
             def find_worker_w():
                 def callback(hwnd, results):
                     shellview = win32gui.FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None)
@@ -88,17 +84,14 @@ class VideoWallpaper(QMainWindow):
                 win32gui.EnumWindows(callback, results)
                 return results[0] if results else None
 
-            # Get the WorkerW window handle
             workerw = find_worker_w()
             if not workerw:
                 print("Could not find WorkerW window")
                 return False
 
-            # Set our window as a child of WorkerW
             hwnd = int(self.winId())
             win32gui.SetParent(hwnd, workerw)
 
-            # Force a redraw of the desktop
             win32gui.InvalidateRect(workerw, None, True)
 
             print(f"Successfully set as wallpaper. WorkerW: {workerw}, Our window: {hwnd}")
