@@ -10,8 +10,15 @@ import sys
 import shutil
 
 #---------< Paths >---------
-DataPath = os.path.join(".","BackgroundsData","BackgroundsData.json")
-ORIGINAL_WALLPAPER_PATH = os.path.join(".","BackgroundsData","original_wallpaper.jpg")
+def ResourcePath(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+DataPath = ResourcePath(os.path.join(".","BackgroundsData","BackgroundsData.json"))
+ORIGINAL_WALLPAPER_PATH = ResourcePath(os.path.join(".","BackgroundsData","original_wallpaper.jpg"))
 wallpaper_process = None
 #---------< Functions >---------
 def GetMainData():
@@ -38,7 +45,7 @@ def GetDataOfWallpaper(SearchType: str, SearchValue: str = None):
 
 def GetCoversPath(WithFolder: bool = True):
     Index = 0
-    CoversFolderPath = os.path.join(".","static","Images","Covers")
+    CoversFolderPath = ResourcePath(os.path.join(".","static","Images","Covers"))
     CoversPath = os.listdir(CoversFolderPath)
     if WithFolder:
         for Item in CoversPath:
@@ -58,9 +65,9 @@ def DownloadBackground(BackgroundName: str, progress_tracker=None):
     Link = f"https://raw.githubusercontent.com/YashaNajafi/AniWall/refs/heads/main/Wallpapers/{filename}"
     current_file = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(current_file))
-    videos_dir = os.path.join(base_dir, "Videos")
+    videos_dir = ResourcePath(os.path.join(base_dir, "Videos"))
     os.makedirs(videos_dir, exist_ok=True)
-    file_path = os.path.join(videos_dir, filename)
+    file_path = ResourcePath(os.path.join(videos_dir, filename))
     try:
         with open(file_path, 'wb') as _:
             pass
@@ -128,9 +135,9 @@ def DownloadBackground(BackgroundName: str, progress_tracker=None):
 def CheckWallpaperExist(BackgroundName: str) -> bool:
     BackgroundName += ".mp4"
     current_file = os.path.abspath(__file__)
-    base_dir = os.path.dirname(os.path.dirname(current_file))
-    videos_dir = os.path.join(base_dir, "Videos")
-    file_path = os.path.join(videos_dir, BackgroundName)
+    base_dir = ResourcePath(os.path.dirname(os.path.dirname(current_file)))
+    videos_dir = ResourcePath(os.path.join(base_dir, "Videos"))
+    file_path = ResourcePath(os.path.join(videos_dir, BackgroundName))
     return os.path.isfile(file_path)
 
 def GetCategory(CategorySTR: str):
@@ -151,7 +158,6 @@ def BackupOriginalWallpaper():
         os.makedirs(data_dir, exist_ok=True)
         wallpaper_path = GetCurrentWallpaperPath()
         if wallpaper_path and os.path.exists(wallpaper_path):
-            # Create a proper copy of the original wallpaper
             shutil.copy2(wallpaper_path, ORIGINAL_WALLPAPER_PATH)
             print(f"Original wallpaper backed up successfully from {wallpaper_path} to {ORIGINAL_WALLPAPER_PATH}")
             return True
@@ -175,18 +181,14 @@ def GetCurrentWallpaperPath():
 def RestoreOriginalWallpaper():
     try:
         if os.path.exists(ORIGINAL_WALLPAPER_PATH):
-            # Make sure the path is absolute
             absolute_path = os.path.abspath(ORIGINAL_WALLPAPER_PATH)
             print(f"Restoring wallpaper from: {absolute_path}")
 
-            # Ensure the wallpaper file is valid
             if os.path.getsize(absolute_path) > 0:
-                # Use SPI_SETDESKWALLPAPER (0x0014) to set the wallpaper
                 result = ctypes.windll.user32.SystemParametersInfoW(
                     0x0014, 0, absolute_path, 3)
 
                 if result:
-                    # Also update the registry to ensure persistence
                     try:
                         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop", 0, winreg.KEY_SET_VALUE)
                         winreg.SetValueEx(key, 'WallPaper', 0, winreg.REG_SZ, absolute_path)
@@ -217,13 +219,11 @@ def SetAnimatedWallpaper(video_path):
             wallpaper_process.wait()
         current_file = os.path.abspath(__file__)
         base_dir = os.path.dirname(current_file)
-        wallpaper_script = os.path.join(base_dir, "Wallpaper.py")
+        wallpaper_script = ResourcePath(os.path.join(base_dir, "Wallpaper.py"))
         wallpaper_process = subprocess.Popen([sys.executable, wallpaper_script, video_path])
 
-        # Give the process a moment to start
         time.sleep(0.5)
 
-        # Check if the process is running
         if wallpaper_process.poll() is None:
             print(f"Wallpaper process started with PID: {wallpaper_process.pid}")
             return True
@@ -239,14 +239,12 @@ def DisableAnimatedWallpaper():
     try:
         print("Attempting to disable animated wallpaper...")
 
-        # First restore the original wallpaper
         wallpaper_restored = RestoreOriginalWallpaper()
 
-        # Then terminate the wallpaper process
         if wallpaper_process and wallpaper_process.poll() is None:
             print(f"Terminating wallpaper process with PID: {wallpaper_process.pid}")
             wallpaper_process.terminate()
-            wallpaper_process.wait(timeout=5)  # Wait with timeout to prevent hanging
+            wallpaper_process.wait(timeout=5)
             wallpaper_process = None
             print("Wallpaper process terminated")
         else:
