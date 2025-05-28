@@ -230,7 +230,7 @@
             fetch('/set-wallpaper?name=' + encodeURIComponent(backgroundName))
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.is_active) {
                         alert("Wallpaper set successfully!");
                         button.disabled = false;
                         button.classList.remove('setting');
@@ -239,7 +239,11 @@
                         button.classList.remove('setting');
                         button.querySelector('.button-text').textContent = originalText;
                         button.disabled = false;
-                        alert("Failed to set wallpaper: " + data.error);
+                        if (data.error) {
+                            alert("Failed to set wallpaper: " + data.error);
+                        } else {
+                            alert("Failed to set wallpaper: Process not running");
+                        }
                     }
                 })
                 .catch(error => {
@@ -289,21 +293,23 @@
             }
 
             if (setWallpaperBtn) {
-                fetch('/wallpaper-status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success && data.is_active) {
-                            convertToDisableButton();
-                        } else if (!setWallpaperBtn.classList.contains('disabled')) {
-                            setWallpaperBtn.addEventListener('click', setWallpaper);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error checking wallpaper status:', error);
-                        if (!setWallpaperBtn.classList.contains('disabled')) {
-                            setWallpaperBtn.addEventListener('click', setWallpaper);
-                        }
-                    });
+                {% if is_wallpaper_active %}
+                    const backgroundName = document.querySelector('.Background-Name').textContent;
+                    fetch('/set-wallpaper?name=' + encodeURIComponent(backgroundName))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.is_active) {
+                                convertToDisableButton();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error setting wallpaper:', error);
+                        });
+                {% else %}
+                    if (!setWallpaperBtn.classList.contains('disabled')) {
+                        setWallpaperBtn.addEventListener('click', setWallpaper);
+                    }
+                {% endif %}
             }
         }
 
@@ -465,7 +471,24 @@
 
             resizeBackgroundName();
 
-            setupButtonEvents();
+            const setWallpaperBtn = document.getElementById('set-wallpaper-btn');
+            const isWallpaperActive = {{ 'true' if is_wallpaper_active else 'false' }};
+            const selectedBackground = "{{ SelectedBackground['Name'] if SelectedBackground else '' }}";
+
+            if (setWallpaperBtn && isWallpaperActive && selectedBackground) {
+                fetch('/set-wallpaper?name=' + encodeURIComponent(selectedBackground))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.is_active) {
+                            convertToDisableButton();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error setting wallpaper:', error);
+                    });
+            } else {
+                setupButtonEvents();
+            }
 
             setInterval(checkWallpaperStatus, 5000);
         });
