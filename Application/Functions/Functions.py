@@ -1,5 +1,5 @@
 #---------< Libs >----------
-import json, os, requests, re
+import json, os, requests, re , logging
 from contextlib import closing
 import threading
 import time
@@ -8,11 +8,43 @@ import subprocess
 import winreg
 import sys
 import shutil
-
 #---------< Paths >---------
 DataPath = os.path.join(".","BackgroundsData","BackgroundsData.json")
-ORIGINAL_WALLPAPER_PATH = os.path.join(".","BackgroundsData","original_wallpaper.jpg")
-wallpaper_process = None
+OriginalWallpaperPath = os.path.join(".","BackgroundsData","OriginalWallpaperBackup.jpg")
+UserDataPath = os.path.join(".","BackgroundsData","UserData.json")
+WallpaperProcess = None
+#---------< Classes >---------
+class UserDataManagement:
+    def __init__(self):
+        self.UserDataPath = UserDataPath
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+        if not os.path.exists(self.UserDataPath):
+            with open(self.UserDataPath, 'w', encoding='utf-8') as file:
+                JsonObject = {
+                    "LastWallpaper": None,
+                    "WallpaperStatus": False
+                }
+                json.dump(JsonObject, file, indent=3)
+
+        with open(self.UserDataPath, 'r', encoding='utf-8') as file:
+            self.UserData = json.load(file)
+
+    def GetWallpaperStatus(self):
+        return self.UserData
+
+    def SetWallpaperStatus(self, WallpaperStatus: bool):
+        self.UserData["WallpaperStatus"] = WallpaperStatus
+
+        with open(self.UserDataPath, 'w', encoding='utf-8') as file:
+            json.dump(self.UserData, file, indent=3)
+
+    def SetLastWallpaper(self, LastWallpaper: str):
+        self.UserData["LastWallpaper"] = LastWallpaper
+
+        with open(self.UserDataPath, 'w', encoding='utf-8') as file:
+            json.dump(self.UserData, file, indent=3)
+
 #---------< Functions >---------
 def GetMainData():
     with open(DataPath, 'r', encoding='utf-8') as file:
@@ -147,12 +179,12 @@ def GetMainCategory(CategorySTR: str):
 
 def BackupOriginalWallpaper():
     try:
-        data_dir = os.path.dirname(ORIGINAL_WALLPAPER_PATH)
+        data_dir = os.path.dirname(OriginalWallpaperPath)
         os.makedirs(data_dir, exist_ok=True)
         wallpaper_path = GetCurrentWallpaperPath()
         if wallpaper_path and os.path.exists(wallpaper_path):
-            shutil.copy2(wallpaper_path, ORIGINAL_WALLPAPER_PATH)
-            print(f"Original wallpaper backed up successfully from {wallpaper_path} to {ORIGINAL_WALLPAPER_PATH}")
+            shutil.copy2(wallpaper_path, OriginalWallpaperPath)
+            print(f"Original wallpaper backed up successfully from {wallpaper_path} to {OriginalWallpaperPath}")
             return True
         else:
             print(f"Could not find current wallpaper at: {wallpaper_path}")
@@ -173,8 +205,8 @@ def GetCurrentWallpaperPath():
 
 def RestoreOriginalWallpaper():
     try:
-        if os.path.exists(ORIGINAL_WALLPAPER_PATH):
-            absolute_path = os.path.abspath(ORIGINAL_WALLPAPER_PATH)
+        if os.path.exists(OriginalWallpaperPath):
+            absolute_path = os.path.abspath(OriginalWallpaperPath)
             print(f"Restoring wallpaper from: {absolute_path}")
 
             if os.path.getsize(absolute_path) > 0:
@@ -198,27 +230,27 @@ def RestoreOriginalWallpaper():
                 print("Original wallpaper file exists but is empty or corrupted")
                 return False
         else:
-            print(f"Original wallpaper backup not found at {ORIGINAL_WALLPAPER_PATH}")
+            print(f"Original wallpaper backup not found at {OriginalWallpaperPath}")
             return False
     except Exception as e:
         print(f"Error restoring original wallpaper: {e}")
         return False
 
 def SetAnimatedWallpaper(video_path):
-    global wallpaper_process
+    global WallpaperProcess
     try:
-        if wallpaper_process and wallpaper_process.poll() is None:
-            wallpaper_process.terminate()
-            wallpaper_process.wait()
+        if WallpaperProcess and WallpaperProcess.poll() is None:
+            WallpaperProcess.terminate()
+            WallpaperProcess.wait()
         current_file = os.path.abspath(__file__)
         base_dir = os.path.dirname(current_file)
         wallpaper_script = os.path.join(base_dir, "Wallpaper.py")
-        wallpaper_process = subprocess.Popen([sys.executable, wallpaper_script, video_path])
+        WallpaperProcess = subprocess.Popen([sys.executable, wallpaper_script, video_path])
 
         time.sleep(0.5)
 
-        if wallpaper_process.poll() is None:
-            print(f"Wallpaper process started with PID: {wallpaper_process.pid}")
+        if WallpaperProcess.poll() is None:
+            print(f"Wallpaper process started with PID: {WallpaperProcess.pid}")
             return True
         else:
             print("Wallpaper process failed to start")
@@ -228,17 +260,17 @@ def SetAnimatedWallpaper(video_path):
         return False
 
 def DisableAnimatedWallpaper():
-    global wallpaper_process
+    global WallpaperProcess
     try:
         print("Attempting to disable animated wallpaper...")
 
         wallpaper_restored = RestoreOriginalWallpaper()
 
-        if wallpaper_process and wallpaper_process.poll() is None:
-            print(f"Terminating wallpaper process with PID: {wallpaper_process.pid}")
-            wallpaper_process.terminate()
-            wallpaper_process.wait(timeout=5)
-            wallpaper_process = None
+        if WallpaperProcess and WallpaperProcess.poll() is None:
+            print(f"Terminating wallpaper process with PID: {WallpaperProcess.pid}")
+            WallpaperProcess.terminate()
+            WallpaperProcess.wait(timeout=5)
+            WallpaperProcess = None
             print("Wallpaper process terminated")
         else:
             print("No active wallpaper process found")
@@ -249,9 +281,9 @@ def DisableAnimatedWallpaper():
         return False
 
 def IsWallpaperRunning():
-    global wallpaper_process
+    global WallpaperProcess
     try:
-        is_running = wallpaper_process is not None and wallpaper_process.poll() is None
+        is_running = WallpaperProcess is not None and WallpaperProcess.poll() is None
         print(f"Wallpaper process status: {'Running' if is_running else 'Not running'}")
         return is_running
     except Exception as e:
