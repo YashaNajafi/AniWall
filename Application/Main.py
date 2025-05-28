@@ -9,6 +9,16 @@ import time
 # ------------<App Config>-----------
 app = Flask(__name__)
 
+# ------------<Cleanup Function>-----------
+def cleanup_on_exit():
+    try:
+        Functions.DisableAnimatedWallpaper()
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func is not None:
+            func()
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+
 # ------------<Routes>-----------
 @app.route('/')
 def index():
@@ -33,11 +43,20 @@ def index():
         'GetMainCategory': Functions.GetMainCategory,
     }
 
+    UserDataOBJ = Functions.UserDataManagement()
+    UserData = UserDataOBJ.GetWallpaperStatus()
+
     if selected:
         background_details = Functions.GetDataOfWallpaper("ByName", selected)
         if background_details:
             template_data['SelectedBackground'] = background_details
             template_data['wallpaper_exists'] = Functions.CheckWallpaperExist(selected)
+
+    if UserData["LastWallpaper"] != None:
+        background_details = Functions.GetDataOfWallpaper("ByName", UserData["LastWallpaper"])
+        template_data['SelectedBackground'] = background_details
+        template_data['wallpaper_exists'] = Functions.CheckWallpaperExist(UserData["LastWallpaper"])
+        template_data['is_wallpaper_active'] = UserData["WallpaperStatus"]
 
     return render_template('index.html', **template_data)
 
@@ -133,6 +152,14 @@ def DownloadProgress():
 @app.route('/set-wallpaper')
 def SetWallpaper():
     background_name = request.args.get('name', '')
+
+    UserDataOBJ = Functions.UserDataManagement()
+    UserData = UserDataOBJ.GetWallpaperStatus()
+
+    UserDataOBJ.SetLastWallpaper(background_name)
+    if UserData["WallpaperStatus"] == False:
+        UserDataOBJ.SetWallpaperStatus(True)
+
     if not background_name:
         return jsonify({'success': False, 'error': 'No background name provided'})
 
@@ -175,6 +202,9 @@ def DisableWallpaper():
         is_running = Functions.IsWallpaperRunning()
 
         if success and not is_running:
+            UserDataOBJ = Functions.UserDataManagement()
+            UserData = UserDataOBJ.GetWallpaperStatus()
+            UserDataOBJ.SetWallpaperStatus(False)
             return jsonify({'success': True})
         else:
             return jsonify({
@@ -210,7 +240,20 @@ if __name__ == '__main__':
     flask_thread.daemon = True
     flask_thread.start()
 
-    window = webview.create_window('AniWall', f'http://127.0.0.1:{port}', confirm_close=True, frameless=False, resizable=False)
+    window = webview.create_window('AniWall', f'http://127.0.0.1:{port}', frameless=False, resizable=False)
+
+    def on_closing():
+        confirm = window.create_confirmation_dialog('Exit', 'Are you sure you want to exit?')
+        if confirm:
+            try:
+                cleanup_on_exit()
+                return True
+            except Exception as e:
+                print(f"Error during window closing: {e}")
+                return False
+        return False
+
+    window.events.closing += on_closing
 
     def on_loaded():
         def lock_maximize():
